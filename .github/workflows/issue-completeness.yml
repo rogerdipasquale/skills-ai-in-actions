@@ -1,0 +1,43 @@
+name: Issue Completeness
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  models: read
+  issues: write
+
+jobs:
+  analyze:
+    name: AI Issue Completeness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Analyze issue with AI
+        id: ai-response
+        uses: actions/ai-inference@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max-tokens: 1000
+          system-prompt: |
+            You are a GitHub issue assistant. Your task is to analyze newly opened issues for completeness.
+
+            Provide concise, helpful suggestions, ask clarifying questions and identify any missing information that would help resolve the issue faster.
+
+            Always respond with ready-to-use markdown content (no code blocks) that can be posted directly as an issue comment.
+
+            Sign off as AI assistant.
+          prompt: |
+            New issue was opened by ${{ github.event.issue.user.login }}
+            Title: ${{ github.event.issue.title }}
+            Body:
+            ---
+            ${{ github.event.issue.body }}
+            ---
+
+      - name: Comment results on the issue
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.issue.number }}
+          body: ${{ steps.ai-response.outputs.response }}
